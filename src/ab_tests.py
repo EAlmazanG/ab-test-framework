@@ -277,30 +277,6 @@ def apply_bonferroni_correction(tidy_df):
     tidy_df['p_value'] = new_p_values
     return tidy_df
 
-def bayesian_ab_test(control_data, test_data, num_samples=10000):
-    control_mean = np.mean(control_data)
-    control_std = np.std(control_data, ddof=1)
-    test_mean = np.mean(test_data)
-    test_std = np.std(test_data, ddof=1)
-    control_samples = np.random.normal(control_mean, control_std, num_samples)
-    test_samples = np.random.normal(test_mean, test_std, num_samples)
-    prob_test_better = np.mean(test_samples > control_samples)
-    return {"bayesian_mean_difference": test_mean - control_mean, "bayesian_probability": prob_test_better}
-
-def permutation_test(control_data, test_data, num_permutations=10000):
-    observed_diff = np.mean(test_data) - np.mean(control_data)
-    combined = np.concatenate([control_data, test_data])
-    count_greater = 0
-    for _ in range(num_permutations):
-        np.random.shuffle(combined)
-        new_control = combined[:len(control_data)]
-        new_test = combined[len(control_data):]
-        permuted_diff = np.mean(new_test) - np.mean(new_control)
-        if abs(permuted_diff) >= abs(observed_diff):
-            count_greater += 1
-    p_value = count_greater / num_permutations
-    return {"permutation_observed_difference": observed_diff, "permutation_p_value": p_value}
-
 def run_ab_tests(test_config, df, variant_column, metric_column):
     results = {}
 
@@ -425,3 +401,27 @@ def run_complete_ab_test(ab_test_config, selected_df, variant_column, metric_col
         df = df[df["test"].isin(allowed_tests)]
     df = df.drop(columns={"test"})
     return df
+
+def bayesian_ab_test(control_data, test_data, num_samples=10000):
+    control_mean = np.mean(control_data)
+    control_std = np.std(control_data, ddof=1)
+    test_mean = np.mean(test_data)
+    test_std = np.std(test_data, ddof=1)
+    control_samples = np.random.normal(control_mean, control_std, num_samples)
+    test_samples = np.random.normal(test_mean, test_std, num_samples)
+    prob_test_better = np.mean(test_samples > control_samples)
+    return {"bayesian_mean_difference": test_mean - control_mean, "bayesian_probability": prob_test_better}
+
+def permutation_test(control_data, test_data, num_permutations=10000):
+    observed_diff = np.mean(test_data) - np.mean(control_data)
+    combined = np.concatenate([control_data, test_data])
+    count_greater = 0
+    for _ in range(num_permutations):
+        np.random.shuffle(combined)
+        new_control = combined[:len(control_data)]
+        new_test = combined[len(control_data):]
+        permuted_diff = np.mean(new_test) - np.mean(new_control)
+        if abs(permuted_diff) >= abs(observed_diff):
+            count_greater += 1
+    p_value = count_greater / num_permutations
+    return {"permutation_observed_difference": observed_diff, "permutation_p_value": p_value}
