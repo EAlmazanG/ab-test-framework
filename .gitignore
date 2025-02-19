@@ -2,3 +2,4 @@
 data/ab_test_example_1.parquet
 data/ab_test_example_3.csv
 data/ab_test_example_2.csv
+*.pyc
