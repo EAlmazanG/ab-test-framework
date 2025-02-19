@@ -17,10 +17,6 @@ import pingouin as pg
 import scikit_posthocs as sp
 
 from scipy import stats
-from scipy.stats import ttest_ind, mannwhitneyu, f_oneway, kruskal, chi2_contingency, fisher_exact, norm
-from statsmodels.stats.proportion import proportions_ztest
-from statsmodels.stats.multicomp import pairwise_tukeyhsd
-from statsmodels.stats.multitest import multipletests
 
 def remove_outliers(df, metric_column, factor=1.5, threshold=0.1):
     q1 = df[metric_column].quantile(0.2)
