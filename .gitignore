@@ -3,3 +3,8 @@ data/ab_test_example_1.parquet
 data/ab_test_example_3.csv
 data/ab_test_example_2.csv
 *.pyc
+*.pyc
+*.pyc
+src/__pycache__/framework.cpython-310.pyc
+src/__pycache__/analysis.cpython-310.pyc
+/src/__pycache__

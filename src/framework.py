@@ -13,6 +13,8 @@ import importlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from scipy.stats import norm
+
 def print_title(title, line_length = 60, symbol = '-'):
     separator = symbol * ((line_length - len(title) - 2) // 2)
     print(f"{separator} {title} {separator}")
@@ -144,20 +146,11 @@ def plot_distributions(selected_df, variant_column, metric_column, alpha=0.05):
         plt.tight_layout()
         plt.show()
 
-def apply_additional_tests(ab_test_config, selected_df, variant_column, metric_column):
-    results = {}
-    groups = {}
-    for variant, df_variant in selected_df.groupby(variant_column):
-        groups[variant] = df_variant[metric_column].values
-    variants = list(groups.keys())
-    pairwise_tests = {}
-    for i in range(len(variants)):
-        for j in range(i + 1, len(variants)):
-            pair = f"{variants[i]} vs {variants[j]}"
-            pairwise_tests[pair] = {}
-            if ab_test_config.get("use_bayesian_test", False):
-                pairwise_tests[pair].update(bayesian_ab_test(groups[variants[i]], groups[variants[j]]))
-            if ab_test_config.get("use_permutation_test", False):
-                pairwise_tests[pair].update(permutation_test(groups[variants[i]], groups[variants[j]]))
-    results["pairwise_tests"] = pairwise_tests
-    return results
+def add_segment_column(selected_df, num_segments=3):
+    unique_segments = [f"segment_{i+1}" for i in range(num_segments)]
+    
+    # Generating random segments
+    np.random.seed(42)  # For reproducibility
+    selected_df['segment'] = np.random.choice(unique_segments, size=len(selected_df))
+    
+    return selected_df

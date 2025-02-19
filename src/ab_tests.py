@@ -425,3 +425,21 @@ def permutation_test(control_data, test_data, num_permutations=10000):
             count_greater += 1
     p_value = count_greater / num_permutations
     return {"permutation_observed_difference": observed_diff, "permutation_p_value": p_value}
+
+def apply_additional_tests(ab_test_config, selected_df, variant_column, metric_column):
+    results = {}
+    groups = {}
+    for variant, df_variant in selected_df.groupby(variant_column):
+        groups[variant] = df_variant[metric_column].values
+    variants = list(groups.keys())
+    pairwise_tests = {}
+    for i in range(len(variants)):
+        for j in range(i + 1, len(variants)):
+            pair = f"{variants[i]} vs {variants[j]}"
+            pairwise_tests[pair] = {}
+            if ab_test_config.get("use_bayesian_test", False):
+                pairwise_tests[pair].update(bayesian_ab_test(groups[variants[i]], groups[variants[j]]))
+            if ab_test_config.get("use_permutation_test", False):
+                pairwise_tests[pair].update(permutation_test(groups[variants[i]], groups[variants[j]]))
+    results["pairwise_tests"] = pairwise_tests
+    return results
