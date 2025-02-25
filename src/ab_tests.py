@@ -18,10 +18,12 @@ import pingouin as pg
 import scikit_posthocs as sp
 
 from scipy import stats
-from scipy.stats import ttest_ind, mannwhitneyu, f_oneway, kruskal, chi2_contingency, fisher_exact, norm
+from scipy.stats import ttest_ind, mannwhitneyu, f_oneway, kruskal, chi2_contingency, fisher_exact, shapiro, levene
 from statsmodels.stats.proportion import proportions_ztest
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from statsmodels.stats.multitest import multipletests
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
 
 from src.framework import extract_p_value 
 
@@ -442,4 +444,99 @@ def apply_additional_tests(ab_test_config, selected_df, variant_column, metric_c
             if ab_test_config.get("use_permutation_test", False):
                 pairwise_tests[pair].update(permutation_test(groups[variants[i]], groups[variants[j]]))
     results["pairwise_tests"] = pairwise_tests
+    return results
+
+def select_interaction_test(selected_df, variant_column, metric_column, segment_column, metric_type):
+    segments = selected_df[segment_column].unique()
+    normality_flags = {}
+    variance_flags = {}
+    variant_sizes = selected_df[variant_column].value_counts()
+    
+    for segment in segments:
+        segment_data = selected_df[selected_df[segment_column] == segment]
+        variants = segment_data[variant_column].unique()
+        groups = [segment_data[segment_data[variant_column] == v][metric_column] for v in variants]
+        
+        sample_size = min(5000, len(segment_data))
+        shapiro_p = shapiro(segment_data[metric_column].sample(sample_size)).pvalue
+        is_normal = shapiro_p > 0.05
+        levene_p = levene(*groups).pvalue
+        is_homogeneous = levene_p > 0.05
+        
+        normality_flags[segment] = is_normal
+        variance_flags[segment] = is_homogeneous
+
+    overall_normal = all(normality_flags.values())
+    overall_homogeneous = all(variance_flags.values())
+    num_variants = len(selected_df[variant_column].unique())
+    max_size = variant_sizes.max()
+    min_size = variant_sizes.min()
+    imbalance_ratio = max_size / min_size if min_size > 0 else float("inf")
+
+    selected_interaction_test = None
+
+    if metric_type == "continuous":
+        if overall_normal:
+            if overall_homogeneous:
+                selected_interaction_test = "use_two_way_anova_interaction_test_segmentation" if num_variants > 2 else "use_anova_interaction_test_segmentation"
+            else:
+                selected_interaction_test = "use_welch_anova_interaction_test_segmentation" if imbalance_ratio > 2 else "use_anova_interaction_test_segmentation"
+        else:
+            selected_interaction_test = "use_kruskal_wallis_interaction_test_segmentation"
+    else:
+        selected_interaction_test = "use_logistic_regression_interaction_test_segmentation"
+
+    interaction_tests = {k: (k == selected_interaction_test) for k in [
+        "use_anova_interaction_test_segmentation",
+        "use_welch_anova_interaction_test_segmentation",
+        "use_kruskal_wallis_interaction_test_segmentation",
+        "use_two_way_anova_interaction_test_segmentation",
+        "use_logistic_regression_interaction_test_segmentation"
+    ]}
+
+    return interaction_tests
+
+def run_interaction_tests(selected_df, variant_column, metric_column, segment_column, interaction_tests):
+    results = {}
+
+    if interaction_tests.get("use_anova_interaction_test_segmentation"):
+        formula = f"{metric_column} ~ C({variant_column}) * C({segment_column})"
+        model = smf.ols(formula, data=selected_df).fit()
+        anova_table = sm.stats.anova_lm(model, typ=2)
+        results["anova_interaction"] = anova_table
+
+    if interaction_tests.get("use_welch_anova_interaction_test_segmentation"):
+        segments = selected_df[segment_column].unique()
+        p_values = {}
+        for segment in segments:
+            segment_data = selected_df[selected_df[segment_column] == segment]
+            variants = segment_data[variant_column].unique()
+            groups = [segment_data[segment_data[variant_column] == v][metric_column] for v in variants]
+            if len(groups) > 1:
+                p_values[segment] = f_oneway(*groups).pvalue
+        results["welch_anova_interaction"] = p_values
+
+    if interaction_tests.get("use_kruskal_wallis_interaction_test_segmentation"):
+        segments = selected_df[segment_column].unique()
+        p_values = {}
+        for segment in segments:
+            segment_data = selected_df[selected_df[segment_column] == segment]
+            variants = segment_data[variant_column].unique()
+            groups = [segment_data[segment_data[variant_column] == v][metric_column] for v in variants]
+            if len(groups) > 1:
+                p_values[segment] = kruskal(*groups).pvalue
+        results["kruskal_wallis_interaction"] = p_values
+
+    if interaction_tests.get("use_two_way_anova_interaction_test_segmentation"):
+        formula = f"{metric_column} ~ C({variant_column}) + C({segment_column}) + C({variant_column}):C({segment_column})"
+        model = smf.ols(formula, data=selected_df).fit()
+        anova_table = sm.stats.anova_lm(model, typ=2)
+        results["two_way_anova_interaction"] = anova_table
+
+    if interaction_tests.get("use_logistic_regression_interaction_test_segmentation"):
+        selected_df["binary_metric"] = (selected_df[metric_column] > 0).astype(int)
+        formula = f"binary_metric ~ C({variant_column}) * C({segment_column})"
+        model = smf.logit(formula, data=selected_df).fit()
+        results["logistic_regression_interaction"] = model.summary()
+
     return results
