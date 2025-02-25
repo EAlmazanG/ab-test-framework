@@ -17,6 +17,28 @@ import pingouin as pg
 import scikit_posthocs as sp
 
 from scipy import stats
+from statsmodels.stats.power import TTestIndPower
+
+def calculate_sample_size_cohen(effect_size, alpha=0.05, power=0.8):
+    analysis = TTestIndPower()
+    sample_size = analysis.solve_power(effect_size=effect_size, alpha=alpha, power=power, alternative='two-sided')
+    return int(np.ceil(sample_size))  # Round up
+
+def calculate_sample_size_var(sample_data_df, metric_column, effect_size, alpha=0.05, power=0.8):
+    std_dev = np.std(sample_data_df[metric_column], ddof=1)  
+    mean_val = np.mean(sample_data_df[metric_column])
+    delta = effect_size * mean_val
+    
+    z_alpha = stats.norm.ppf(1 - alpha / 2) 
+    z_beta = stats.norm.ppf(power)           
+    
+    numerator = (z_alpha + z_beta) ** 2 * (2 * std_dev ** 2)
+    sample_size = numerator / (delta ** 2)
+    
+    return int(np.ceil(sample_size))
+
+def calculate_experiment_duration(sample_size, daily_traffic, proportion=1.0):
+    return int(np.ceil(sample_size / (daily_traffic * proportion)))
 
 def remove_outliers(df, metric_column, factor=1.5, threshold=0.1):
     q1 = df[metric_column].quantile(0.2)
