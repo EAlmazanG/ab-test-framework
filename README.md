@@ -87,14 +87,6 @@ For segment analysis, use the **ab-test-segments_framework_template.ipynb** note
 - Select your columns: variant, metric and segment.
 - Run the complete notebook, all the analysis and test will be automatically run, selecting the most appropiated test for your data distribution.
 
-```python
-from src.ab_tests import run_ab_test
-
-data = load_data("data/ab_test_example_1.csv")
-results = run_ab_test(data, metric="conversion_rate", test_type="t_test")
-print(results)
-```
-
 ![Preview of the framework](img/samples.png)
 
 ## Visualization
@@ -102,3 +94,5 @@ The framework includes built-in visualizations for:
 - Sample distributions.
 - Test results with confidence intervals.
 - Segment-wise differences.
+
+![Preview of the framework](img/distribution.png)
