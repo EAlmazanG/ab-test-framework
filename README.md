@@ -1,6 +1,6 @@
 # A/B Test Framework
 
-![Preview of the framework](img/ab_test_framework.png)
+![Preview of the framework](img/statistical_testing.png)
 
 ## Overview
 This framework provides a structured, end-to-end approach to conducting A/B tests, from experiment design to results analysis, including segmentation analysis. It is designed to be a flexible and reusable template for running A/B experiments efficiently.
@@ -65,7 +65,7 @@ The framework provides structured templates to design experiments:
 - **Validate sample variance**: Confirm homogeneity before statistical tests.
 
 ### 3. Statistical Testing
-- **Choose the appropriate test** (e.g., t-test, chi-square, Mann-Whitney U).
+- **Choose automatically the appropriate test** (e.g., t-test, chi-square, Mann-Whitney U).
 - **Adjust for unbalanced samples** if necessary.
 - **Perform hypothesis testing** to determine statistical significance.
 - **Apply multiple comparison corrections** if required.
@@ -94,6 +94,8 @@ data = load_data("data/ab_test_example_1.csv")
 results = run_ab_test(data, metric="conversion_rate", test_type="t_test")
 print(results)
 ```
+
+![Preview of the framework](img/samples.png)
 
 ## Visualization
 The framework includes built-in visualizations for:
